@@ -12,7 +12,8 @@ module SEPA
     def transaction_group(transaction)
       { requested_date: transaction.requested_date,
         batch_booking:  transaction.batch_booking,
-        service_level:  transaction.service_level
+        service_level:  transaction.service_level,
+        currency: transaction.currency
       }
     end
 
@@ -26,14 +27,13 @@ module SEPA
           builder.BtchBookg(group[:batch_booking])
           builder.NbOfTxs(transactions.length)
           builder.CtrlSum('%.2f' % amount_total(transactions))
-          builder.PmtTpInf do
-            builder.SvcLvl do
-              builder.Cd(group[:service_level])
-            end
-          end
           builder.ReqdExctnDt(group[:requested_date].iso8601)
           builder.Dbtr do
             builder.Nm(account.name)
+            builder.PstrlAdr do
+              builder.Ctry(account.country)
+              builder.AdrLine(account.address_line)
+            end
           end
           builder.DbtrAcct do
             builder.Id do
@@ -51,7 +51,6 @@ module SEPA
               end
             end
           end
-          builder.ChrgBr('SLEV')
 
           transactions.each do |transaction|
             build_transaction(builder, transaction)
@@ -63,10 +62,19 @@ module SEPA
     def build_transaction(builder, transaction)
       builder.CdtTrfTxInf do
         builder.PmtId do
+          builder.InstrId(transaction.instruction_id)
           builder.EndToEndId(transaction.reference)
         end
+        unless transaction.service_level.nil?
+          builder.PmtTpInf do
+            builder.SvcLvl do
+              builder.Cd(transaction.service_level)
+            end
+          end
+        end
+        #builder.ChrgBr('SLEV')
         builder.Amt do
-          builder.InstdAmt('%.2f' % transaction.amount, Ccy: 'EUR')
+          builder.InstdAmt('%.2f' % transaction.amount, Ccy: transaction.currency)
         end
         if transaction.bic
           builder.CdtrAgt do
@@ -77,6 +85,12 @@ module SEPA
         end
         builder.Cdtr do
           builder.Nm(transaction.name)
+          if !transaction.address_line1.blank? || !transaction.address_line2.blank?
+            builder.PstlAdr do
+              builder.AdrLine(transaction.address_line1) unless transaction.address_line1.blank?
+              builder.AdrLine(transaction.address_line2) unless transaction.address_line2.blank?
+            end
+          end
         end
         builder.CdtrAcct do
           builder.Id do
@@ -86,6 +100,19 @@ module SEPA
         if transaction.remittance_information
           builder.RmtInf do
             builder.Ustrd(transaction.remittance_information)
+          end
+        elsif transaction.creditor_reference
+          builder.RmtInf do
+            builder.Strd do
+              builder.CdtrRefInf do
+                builder.Tp do
+                  builder.CdOrPrtry do
+                    builder.Cd("SCOR")
+                  end
+                end
+                builder.Ref(transaction.creditor_reference)
+              end
+            end
           end
         end
       end

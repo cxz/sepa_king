@@ -3,7 +3,7 @@ module SEPA
   class CreditTransferTransaction < Transaction
     attr_accessor :service_level
 
-    validates_inclusion_of :service_level, :in => %w(SEPA URGP)
+    validates_inclusion_of :service_level, :in => %w(SEPA URGP), allow_nil: true
 
     validate do |t|
       if t.requested_date.is_a?(Date)
@@ -13,13 +13,14 @@ module SEPA
 
     def initialize(attributes = {})
       super
-      self.service_level ||= 'SEPA'
+      #allow non-SEPA
+      #self.service_level ||= 'SEPA'
     end
 
     def schema_compatible?(schema_name)
       case schema_name
       when PAIN_001_001_03, PAIN_001_002_03
-        self.bic.present? && self.service_level == 'SEPA'
+        self.bic.present?
       when PAIN_001_003_03
         true
       end
