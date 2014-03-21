@@ -30,7 +30,7 @@ module SEPA
           builder.ReqdExctnDt(group[:requested_date].iso8601)
           builder.Dbtr do
             builder.Nm(account.name)
-            builder.PstrlAdr do
+            builder.PstlAdr do
               builder.Ctry(account.country)
               builder.AdrLine(account.address_line)
             end
