@@ -19,7 +19,7 @@ module SEPA
 
     def schema_compatible?(schema_name)
       case schema_name
-      when PAIN_001_001_03, PAIN_001_002_03
+      when PAIN_001_001_03, PAIN_001_002_03, PAIN_001_001_03_ch_02
         self.bic.present?
       when PAIN_001_003_03
         true
